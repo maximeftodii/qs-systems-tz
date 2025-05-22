@@ -5,7 +5,6 @@ const BarrierFormPage = require('../pages/BarrierFormPage');
 const ReportPanelPage = require('../pages/ReportPanelPage');
 
 test('Login and navigate through application', async ({ page }) => {
-    // Store selected values for verification
     let selectedValues = {
         typeOfUser: null,
         identity: null,
@@ -57,8 +56,6 @@ test('Login and navigate through application', async ({ page }) => {
         await barrierFormPage.selectStudiesLevel('en');
         selectedValues.typeOfUser = await barrierFormPage.selectTypeOfUser('en');
         await barrierFormPage.inputPhoneNumber('en');
-        
-        // Select TB barriers and complete form
         await barrierFormPage.selectRandomTBBarriers();
     });
 
@@ -67,29 +64,18 @@ test('Login and navigate through application', async ({ page }) => {
     });
 
     await test.step('Verify selected values in reports', async () => {
-        // Verify type of user
         await reportPanelPage.selectDropdownValue('Type Of User', selectedValues.typeOfUser);
-        
-        // Verify key population (identity)
         await reportPanelPage.selectDropdownValue('Key population', selectedValues.identity);
-        
-        // Verify age group
         await reportPanelPage.selectDropdownValue('Age', selectedValues.ageGroup);
-        
-        // Wait for the report to update with the selected filters
         await page.waitForTimeout(2000);
-        
-        // Verify that the report contains data
         const reportData = await reportPanelPage.getReportData();
         expect(reportData.length).toBeGreaterThan(0);
-
         await reportPanelPage.inputTodayDate();
-
         const filters = {
             typeOfUser: selectedValues.typeOfUser,
             keyPopulation: selectedValues.identity,
             age: selectedValues.ageGroup,
-            date: new Date() // today's date
+            date: new Date()
         };
 
         const recordsMatch = await reportPanelPage.verifyRecordsMatchFilters(filters);
