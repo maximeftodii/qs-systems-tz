@@ -246,4 +246,4 @@ This generates JUnit XML reports suitable for CI systems.
 
 ## 📄 License
 
-This project is licensed under the ISC License. 
+This project is licensed under the ISC License.
