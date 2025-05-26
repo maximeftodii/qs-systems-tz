@@ -1,12 +1,15 @@
 require('dotenv').config();
+const { URLS, LANGUAGES, TIMEOUTS } = require('../utils/constants');
+const { getRandomArrayItem, generateRandomText, generateRandomPhoneNumber } = require('../utils/helpers');
+const logger = require('../utils/logger');
 
 class BasePage {
     constructor(page) {
         this.page = page;
-        this.baseUrl = 'https://app.qsystemsglobal.com/VST/MDA/WebApp';
+        this.baseUrl = URLS.BASE_URL;
         
-        // Common language settings
-        this.languages = ['ru', 'en', 'ro'];
+        // Language settings
+        this.languages = Object.values(LANGUAGES);
         this.currentLanguage = null;
         this.languageDropdown = "#navbarDropdown_clang";
     }
@@ -16,7 +19,12 @@ class BasePage {
      * @returns {Promise<string>} The page title
      */
     async getPageTitle() {
-        return this.page.title();
+        try {
+            return await this.page.title();
+        } catch (error) {
+            logger.error('Failed to get page title', { error: error.message });
+            throw error;
+        }
     }
 
     /**
@@ -25,6 +33,8 @@ class BasePage {
      */
     async setLanguage(language) {
         try {
+            logger.step(`Setting language to ${language}`);
+            
             if (!this.languages.includes(language)) {
                 throw new Error(`Unsupported language: ${language}. Supported languages are: ${this.languages.join(', ')}`);
             }
@@ -32,10 +42,13 @@ class BasePage {
             await this.page.locator(this.languageDropdown).click();
             
             const languageOption = this.page.locator(`text="${language}"`).first();
+            await languageOption.waitFor({ state: 'visible', timeout: TIMEOUTS.MEDIUM });
             await languageOption.click();
+            
             this.currentLanguage = language;
+            logger.step(`Setting language to ${language}`, 'success');
         } catch (error) {
-            console.error(`Failed to set language to ${language}: ${error.message}`);
+            logger.step(`Setting language to ${language}`, 'error', { error: error.message });
             throw error;
         }
     }
@@ -44,42 +57,109 @@ class BasePage {
      * Get a random item from an array
      * @param {Array} array - Array to select from
      * @returns {*} Random item from array
+     * @deprecated Use helpers.getRandomArrayItem instead
      */
     getRandomArrayItem(array) {
-        return array[Math.floor(Math.random() * array.length)];
+        logger.warn('BasePage.getRandomArrayItem is deprecated. Use helpers.getRandomArrayItem instead.');
+        return getRandomArrayItem(array);
     }
 
     /**
      * Generate random text of specified length
      * @param {number} wordCount - Number of words to generate
      * @returns {string} Random text
+     * @deprecated Use helpers.generateRandomText instead
      */
     generateRandomText(wordCount = 5) {
-        const randomWords = [
-            'test', 'auto', 'random', 'text', 'word', 'data', 'input',
-            'field', 'form', 'value', 'content', 'sample', 'example',
-            'entry', 'info', 'note', 'detail', 'item', 'record', 'case'
-        ];
-        
-        const words = [];
-        for (let i = 0; i < wordCount; i++) {
-            const randomWord = randomWords[Math.floor(Math.random() * randomWords.length)];
-            words.push(randomWord);
-        }
-        return words.join(' ');
+        logger.warn('BasePage.generateRandomText is deprecated. Use helpers.generateRandomText instead.');
+        return generateRandomText(wordCount);
     }
 
     /**
      * Generate a random 8-digit phone number
      * @returns {string} Random phone number
+     * @deprecated Use helpers.generateRandomPhoneNumber instead
      */
     generateRandomPhoneNumber() {
-        // Generate a random 8-digit number
-        let number = '7'; // Start with 7
-        for (let i = 0; i < 7; i++) {
-            number += Math.floor(Math.random() * 10);
+        logger.warn('BasePage.generateRandomPhoneNumber is deprecated. Use helpers.generateRandomPhoneNumber instead.');
+        return generateRandomPhoneNumber();
+    }
+
+    /**
+     * Wait for element to be visible and stable
+     * @param {string|Locator} selector - Element selector or locator
+     * @param {number} timeout - Timeout in milliseconds
+     * @returns {Promise<Locator>} Element locator
+     */
+    async waitForElement(selector, timeout = TIMEOUTS.MEDIUM) {
+        try {
+            const locator = typeof selector === 'string' ? this.page.locator(selector) : selector;
+            await locator.waitFor({ state: 'visible', timeout });
+            return locator;
+        } catch (error) {
+            logger.error(`Failed to wait for element: ${selector}`, { error: error.message });
+            throw error;
         }
-        return number;
+    }
+
+    /**
+     * Click element with retry logic
+     * @param {string|Locator} selector - Element selector or locator
+     * @param {Object} options - Click options
+     */
+    async clickElement(selector, options = {}) {
+        try {
+            const locator = await this.waitForElement(selector);
+            await locator.scrollIntoViewIfNeeded();
+            await locator.click(options);
+        } catch (error) {
+            logger.error(`Failed to click element: ${selector}`, { error: error.message });
+            throw error;
+        }
+    }
+
+    /**
+     * Fill input field with text
+     * @param {string|Locator} selector - Element selector or locator
+     * @param {string} text - Text to fill
+     */
+    async fillInput(selector, text) {
+        try {
+            const locator = await this.waitForElement(selector);
+            await locator.clear();
+            await locator.fill(text);
+        } catch (error) {
+            logger.error(`Failed to fill input: ${selector}`, { error: error.message, text });
+            throw error;
+        }
+    }
+
+    /**
+     * Get current URL
+     * @returns {Promise<string>} Current page URL
+     */
+    async getCurrentUrl() {
+        try {
+            return this.page.url();
+        } catch (error) {
+            logger.error('Failed to get current URL', { error: error.message });
+            throw error;
+        }
+    }
+
+    /**
+     * Navigate to URL
+     * @param {string} url - URL to navigate to
+     */
+    async navigateTo(url) {
+        try {
+            logger.step(`Navigating to ${url}`);
+            await this.page.goto(url, { waitUntil: 'networkidle', timeout: TIMEOUTS.NAVIGATION });
+            logger.step(`Navigating to ${url}`, 'success');
+        } catch (error) {
+            logger.step(`Navigating to ${url}`, 'error', { error: error.message });
+            throw error;
+        }
     }
 }
 
