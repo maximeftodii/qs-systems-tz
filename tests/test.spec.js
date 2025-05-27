@@ -7,11 +7,11 @@ const { LANGUAGES } = require('../utils/constants');
 const logger = require('../utils/logger');
 
 /**
- * QS Systems Application Test - English Language Only
+ * QSystems Application Test - English Language Only
  * Tests the complete flow: Login -> Form submission -> Report verification
  * Language: English (en)
  */
-test.describe('QS Systems Application - English Language Test', () => {
+test.describe('QSystems Application - English Language Test', () => {
     let loginPage, barrierFormPage, reportPanelPage;
     let selectedValues = {};
 
